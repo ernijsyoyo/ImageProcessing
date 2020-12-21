@@ -11,5 +11,4 @@ Utilities::~Utilities(){
 
 void Utilities::HelloWorld(){
     std::cout << " Hello World " << std::endl;
-    actualHelloWorld();
 }
