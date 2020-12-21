@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# ignore files in folder foo
+build/*
+undefined/*
+# but keep the folder
+!build/.keep
