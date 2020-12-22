@@ -104,7 +104,6 @@ public:
 class MotionStrategy : public AlgorithmStrategy {
 private:
     cv::Mat prev_Frame;
-    int counter = 1;
 
 public:
     MotionStrategy(){
@@ -139,6 +138,39 @@ public:
  * Concrete Strategies implement the algorithm while following the base Strategy
  * interface. The interface makes them interchangeable in the Context.
  */
+class LowpassFilter : public AlgorithmStrategy {
+public:
+    LowpassFilter(){
+        AlgorithmName = "Lowpass Filter";
+    }
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float fLowPassRC = static_cast<float>(*variable.get());
+
+        for (size_t i = 0; i < rows; i++) {
+            for (size_t j = 0; j < columns; j++) {
+                auto framePix = Utilities::GetPixelValue(frame, i, j);
+                auto outputPix = Utilities::GetPixelValue(output, i, j);
+                float dPixel = framePix - outputPix; 
+                dPixel *= fLowPassRC;
+                auto outputValue = dPixel + outputPix;
+                Utilities::SetPixelValue(output, i, j, outputValue);
+            }
+        }
+
+        /* Code */
+        return output;
+    }
+};
+
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
 class ExampleStrategy : public AlgorithmStrategy {
 public:
     ExampleStrategy(){
@@ -147,11 +179,15 @@ public:
     cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
         assert(variable != nullptr);
 
+        auto output = cv::Mat(480, 640, CV_8UC1);
         auto rows = frame.rows;
         auto columns = frame.cols;
         float threshold = static_cast<float>(*variable.get());
 
+        // copy input to output
+        frame.copyTo(output);
+
         /* Code */
-        return frame;
+        return output;
     }
 };
