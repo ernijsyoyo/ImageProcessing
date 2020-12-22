@@ -19,25 +19,35 @@ cv::Mat Utilities::AddTwoFrames(cv::Mat frame1, cv::Mat frame2) {
     return output;
 }
 
-float Utilities::GetPixelValue(cv::Mat frame, int x, int y) {
-    auto output = static_cast<float>( (int)frame.at<uchar>(x, y) );
+float Utilities::GetPixelValue(cv::Mat frame, int row, int column) {
+    auto output = static_cast<float>( (int)frame.at<uchar>(row, column) );
     return output / 255.f;
 }
 
-void Utilities::SetPixelValue(cv::Mat frame, int x, int y, float value) {
+void Utilities::SetPixelValue(cv::Mat frame, int row, int column, float value) {
+    if (value > 1.0f) value = 1.0f;
+    
     auto setTo = value * 255.f;
     auto intValue = static_cast<size_t>(setTo);
-    frame.at<uchar>(x, y) = intValue;
+    frame.at<uchar>(row, column) = intValue;
 }
 
-void Utilities::IncreaseInt(std::shared_ptr<float> input){
-    std::cout << "Increasing input " << *input.get() << std::endl;
+void Utilities::IncreaseInt(std::shared_ptr<int> input){
+    *input += 1;
+    std::cout << "Increased input " << *input.get() << std::endl;
+}
+
+void Utilities::DecreaseInt(std::shared_ptr<int> input){
+    *input -= 1;
+    std::cout << "Decrease input " << *input.get() << std::endl;
+}
+
+void Utilities::IncreaseFloat(std::shared_ptr<float> input){
     *input += 0.01f;
     std::cout << "Increased input " << *input.get() << std::endl;
 }
 
-void Utilities::DecreaseInt(std::shared_ptr<float> input){
-    std::cout << "Decreasing input " << *input.get() << std::endl;
+void Utilities::DecreaseFloat(std::shared_ptr<float> input){
     *input -= 0.01f;
     std::cout << "Decrease input " << *input.get() << std::endl;
 }
