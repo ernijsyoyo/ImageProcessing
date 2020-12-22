@@ -175,7 +175,7 @@ public:
 class SimpleConvolution : public AlgorithmStrategy {
 public:
 
-    float *pConvoKernel = kernel_blur;
+    float *pConvoKernel = kernel_sharp;
 
     float kernel_blur[9] = {
         0.0f,   0.125f, 0.0f,
@@ -189,6 +189,8 @@ public:
         0.0f,   -1.0f,  0.0f
     };
 
+
+
     SimpleConvolution(){
         AlgorithmName = "Simple Convolution";
     }
@@ -201,11 +203,14 @@ public:
         auto columns = frame.cols;
         float threshold = static_cast<float>(*variable.get());
 
-        if(threshold > 0.5f){
-            pConvoKernel = kernel_blur;
-        } else {
-            pConvoKernel = kernel_sharp;
+        if (cv::waitKey(5) == 110) {
+            pConvoKernel = kernel_blur; // key n
+            std::cout << "Blur" << std::endl;
         }
+        if (cv::waitKey(5) == 109) {
+            pConvoKernel = kernel_sharp; // key m
+            std::cout << "Sharp" << std::endl;
+        } 
 
         for (size_t i = 0; i < rows; i++) {
             for (size_t j = 0; j < columns; j++) {
@@ -213,20 +218,69 @@ public:
 
                 for (int n = -1; n < +2; n++) {
                     for (int m = -1; m < +2; m++) {
-                        auto kernelCoeff = pConvoKernel[(m + 1) * 3 + (n + 1)];
+                        auto kernelCoeff = pConvoKernel[(m + 1) * 3 + (n + 1)] * threshold;
                         auto pixelValue = Utilities::GetPixelValue(frame, i + n, j + m);
                         auto outputPixel = pixelValue * kernelCoeff;
+                        fSum += outputPixel;
                     }
                 }
-                std::cout << fSum << std::endl;
                 Utilities::SetPixelValue(output, i, j, fSum);
             }
         }
-
         return output;
     }
 };
 
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
+class SobelEdgeDetection : public AlgorithmStrategy {
+public:
+    float kernel_sobel_h[9] = {
+        -1.0f,  -2.0f, -1.0f,
+        0.0f,   0.0f,  0.0f,
+        1.0f,   2.0f,  1.0f
+    };
+    float kernel_sobel_v[9] = {
+        -1.0f,   0.0f,  1.0f,
+        -2.0f,   0.0f,  2.0f,
+        -1.0f,   0.0f,  1.0f
+    };
+
+
+    SobelEdgeDetection(){
+        AlgorithmName = "Sobel Edge Detection";
+    }
+
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float threshold = static_cast<float>(*variable.get());
+
+        for (size_t i = 0; i < rows; i++) {
+            for (size_t j = 0; j < columns; j++) {
+                float fSumH = 0.0f;
+                float fSumV = 0.0f;
+
+                for (int n = -1; n < +2; n++) {
+                    for (int m = -1; m < +2; m++) {
+                        auto kernelCoeffH = kernel_sobel_h[(m + 1) * 3 + (n + 1)];
+                        auto kernelCoeffV = kernel_sobel_v[(m + 1) * 3 + (n + 1)];
+                        auto pixelValue = Utilities::GetPixelValue(frame, i + n, j + m);
+                        fSumH += pixelValue * kernelCoeffH;
+                        fSumV += pixelValue * kernelCoeffV;
+                    }
+                }
+                Utilities::SetPixelValue(output, i, j, fabs(fSumH + fSumV) / 2);
+            }
+        }
+        return output;
+    }
+};
 
 /**
  * Concrete Strategies implement the algorithm while following the base Strategy

@@ -19,6 +19,7 @@ int main(int argc, char** argv )
 	// Placeholders for frames
     cv::Mat input;
     cv::Mat prev_input;
+    cv::Mat output;
     cv::namedWindow("Gray", cv::WINDOW_AUTOSIZE);
 
     // Control buttons
@@ -31,7 +32,8 @@ int main(int argc, char** argv )
     auto exampleStrategy = new ExampleStrategy;
     auto lowPass = new LowpassFilter;
     auto simpleConvolution = new SimpleConvolution;
-    Context *context = new Context(simpleConvolution);
+    auto sobelEdgeDetection= new SobelEdgeDetection;
+    Context *context = new Context(lowPass);
     
     std::cout << "Stream starting" << std::endl;
     while (true) {
@@ -40,9 +42,12 @@ int main(int argc, char** argv )
         cv::cvtColor(input, input, cv::COLOR_BGR2GRAY); // conv color to gray
 
         // Process strategy and display result
-        auto output = context->ProcessStrategy(input, userInput);
-        if( output.empty() ) break; // end of video stream
-        cv::imshow("Gray", output);
+        auto processedInput = context->ProcessStrategy(input, userInput);
+        if( processedInput.empty() ) break; // end of video stream
+
+        // Show original and processed side by side
+        cv::hconcat(input, processedInput, output);
+        cv::imshow("Gray", processedInput);
         
         // Algorithm control and loop break
         if (cv::waitKey(5) == 113) break; // stop capturing by pressing ESC
@@ -51,6 +56,7 @@ int main(int argc, char** argv )
         if (cv::waitKey(5) == 50) context->set_strategy(motionStrategy); // key 2
         if (cv::waitKey(5) == 51) context->set_strategy(lowPass); // key 3
         if (cv::waitKey(5) == 52) context->set_strategy(simpleConvolution); // key 4
+        if (cv::waitKey(5) == 53) context->set_strategy(sobelEdgeDetection); // key 5
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
     }
