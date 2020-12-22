@@ -15,7 +15,7 @@
 class AlgorithmStrategy {
 public:
     virtual ~AlgorithmStrategy() {}
-    virtual cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable = nullptr) const = 0;
+    virtual cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable = nullptr) = 0;
     std::string AlgorithmName; 
 };
 
@@ -58,8 +58,9 @@ public:
      * The Context delegates some work to the Strategy object instead of
      * implementing +multiple versions of the algorithm on its own.
      */
-    void ProcessStrategy(cv::Mat frame, std::shared_ptr<float> userInput = nullptr) const {
+    cv::Mat ProcessStrategy(cv::Mat frame, std::shared_ptr<float> userInput = nullptr) {
         cv::Mat result = this->strategy_->Process(frame, userInput);
+        return result;
     }
 };
 
@@ -74,7 +75,7 @@ public:
         AlgorithmName = "Thresholding";
     }
 
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) const override {
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
         assert(variable != nullptr);
 
         auto rows = frame.rows;
@@ -102,30 +103,35 @@ public:
  */
 class MotionStrategy : public AlgorithmStrategy {
 private:
-    cv::Mat *prev_Frame = new cv::Mat(640, 480, CV_8UC1);
+    cv::Mat prev_Frame;
+    int counter = 1;
 
 public:
     MotionStrategy(){
         AlgorithmName = "Motion Algorithm";
     }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) const override {
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
         assert(variable != nullptr);
-        if (prev_Frame->empty()) {
-            frame.copyTo(*prev_Frame);
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        if (prev_Frame.empty()) {
+            frame.copyTo(prev_Frame);
             return frame;
-        }
-
+        }        
+        
         auto rows = frame.rows;
         auto columns = frame.cols;
 
+        // Subtract this frame from previous frame and set absolute diff
+        // alternatively: cv::absdiff(frame, prev_Frame, output);
         for (size_t i = 0; i < rows; i++) {
             for (size_t j = 0; j < columns; j++) {
-                auto diff = fabs(Utilities::GetPixelValue(frame, i, j) - Utilities::GetPixelValue(*prev_Frame, i, j));
-                Utilities::SetPixelValue(frame, i, j, diff);
+                auto diff = fabs(Utilities::GetPixelValue(frame, i, j) - Utilities::GetPixelValue(prev_Frame, i, j));
+                Utilities::SetPixelValue(output, i, j, diff);
             }
         }
-        frame.copyTo(*prev_Frame);
-        return frame;
+
+        frame.copyTo(prev_Frame); // save previous frame
+        return output;
     }
 };
 
@@ -138,7 +144,7 @@ public:
     ExampleStrategy(){
         AlgorithmName = "Example Algorithm";
     }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) const override {
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
         assert(variable != nullptr);
 
         auto rows = frame.rows;
