@@ -30,7 +30,8 @@ int main(int argc, char** argv )
     auto motionStrategy = new MotionStrategy;
     auto exampleStrategy = new ExampleStrategy;
     auto lowPass = new LowpassFilter;
-    Context *context = new Context(exampleStrategy);
+    auto simpleConvolution = new SimpleConvolution;
+    Context *context = new Context(simpleConvolution);
     
     std::cout << "Stream starting" << std::endl;
     while (true) {
@@ -45,10 +46,11 @@ int main(int argc, char** argv )
         
         // Algorithm control and loop break
         if (cv::waitKey(5) == 113) break; // stop capturing by pressing ESC
-        if (cv::waitKey() == 48) context->set_strategy(exampleStrategy); // key 0
+        if (cv::waitKey(5) == 48) context->set_strategy(exampleStrategy); // key 0
         if (cv::waitKey(5) == 49) context->set_strategy(thresholdStrategy); // key 1
         if (cv::waitKey(5) == 50) context->set_strategy(motionStrategy); // key 2
-        if (cv::waitKey(5) == 51) context->set_strategy(lowPass); // key 2
+        if (cv::waitKey(5) == 51) context->set_strategy(lowPass); // key 3
+        if (cv::waitKey(5) == 52) context->set_strategy(simpleConvolution); // key 4
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
     }

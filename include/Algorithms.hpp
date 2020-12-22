@@ -40,6 +40,7 @@ private:
      */
 public:
     Context(AlgorithmStrategy *algStrat = nullptr) {
+        std::cout << "Initializing with algorithm: " << algStrat->AlgorithmName << std::endl;
         strategy_ = algStrat;
     }
     ~Context() {
@@ -171,6 +172,66 @@ public:
  * Concrete Strategies implement the algorithm while following the base Strategy
  * interface. The interface makes them interchangeable in the Context.
  */
+class SimpleConvolution : public AlgorithmStrategy {
+public:
+
+    float *pConvoKernel = kernel_blur;
+
+    float kernel_blur[9] = {
+        0.0f,   0.125f, 0.0f,
+        0.125f, 0.5f,   0.125f,
+        0.0f,   0.125f, 0.0f
+    };
+
+    float kernel_sharp[9] = {
+        0.0f,   -1.0f,  0.0f,
+        -1.0f,  -5.0f,  -1.0f,
+        0.0f,   -1.0f,  0.0f
+    };
+
+    SimpleConvolution(){
+        AlgorithmName = "Simple Convolution";
+    }
+
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float threshold = static_cast<float>(*variable.get());
+
+        if(threshold > 0.5f){
+            pConvoKernel = kernel_blur;
+        } else {
+            pConvoKernel = kernel_sharp;
+        }
+
+        for (size_t i = 0; i < rows; i++) {
+            for (size_t j = 0; j < columns; j++) {
+                float fSum = 0.0f;
+
+                for (int n = -1; n < +2; n++) {
+                    for (int m = -1; m < +2; m++) {
+                        auto kernelCoeff = pConvoKernel[(m + 1) * 3 + (n + 1)];
+                        auto pixelValue = Utilities::GetPixelValue(frame, i + n, j + m);
+                        auto outputPixel = pixelValue * kernelCoeff;
+                    }
+                }
+                std::cout << fSum << std::endl;
+                Utilities::SetPixelValue(output, i, j, fSum);
+            }
+        }
+
+        return output;
+    }
+};
+
+
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
 class ExampleStrategy : public AlgorithmStrategy {
 public:
     ExampleStrategy(){
@@ -184,10 +245,10 @@ public:
         auto columns = frame.cols;
         float threshold = static_cast<float>(*variable.get());
 
+        /* Code */
         // copy input to output
         frame.copyTo(output);
 
-        /* Code */
         return output;
     }
 };
