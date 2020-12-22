@@ -33,23 +33,21 @@ int main(int argc, char** argv )
     std::cout << "Stream starting" << std::endl;
     while (true) {
         // Convert webcam to grayscale
-        prev_input = input;
         vidCap >> input;
         cv::cvtColor(input, input, cv::COLOR_BGR2GRAY); // conv color to gray
-        
+
         // Process strategy and display result
-        context->ProcessStrategy(input, userInput);
-        if( input.empty() ) break; // end of video stream
-        cv::imshow("Gray", input);
-        
+        auto output = context->ProcessStrategy(input, userInput);
+        if( output.empty() ) break; // end of video stream
+        cv::imshow("Gray", output);
         
         // Algorithm control and loop break
         if (cv::waitKey(5) == 113) break; // stop capturing by pressing ESC
-        if (cv::waitKey(5) == 49) context->set_strategy(thresholdStrategy); // key 1
-        if (cv::waitKey(5) == 50) context->set_strategy(motionStrategy); // key 2
         if (cv::waitKey(5) == 51) *algorithmSwitch.get() = 3; // key 3
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
+        if (cv::waitKey(5) == 49) context->set_strategy(thresholdStrategy); // key 1
+        if (cv::waitKey(5) == 50) context->set_strategy(motionStrategy); // key 2
     }
     
     vidCap.release();

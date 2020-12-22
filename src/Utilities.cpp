@@ -28,7 +28,7 @@ void Utilities::SetPixelValue(cv::Mat frame, int row, int column, float value) {
     if (value > 1.0f) value = 1.0f;
     
     auto setTo = value * 255.f;
-    auto intValue = static_cast<size_t>(setTo);
+    auto intValue = static_cast<size_t>(setTo + 0.5f);
     frame.at<uchar>(row, column) = intValue;
 }
 
