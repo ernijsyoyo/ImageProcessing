@@ -33,7 +33,8 @@ int main(int argc, char** argv )
     auto lowPass = new LowpassFilter;
     auto simpleConvolution = new SimpleConvolution;
     auto sobelEdgeDetection= new SobelEdgeDetection;
-    Context *context = new Context(lowPass);
+    auto morphOps= new MorphologicalOperations;
+    Context *context = new Context(thresholdStrategy);
     
     std::cout << "Stream starting" << std::endl;
     while (true) {
@@ -46,7 +47,6 @@ int main(int argc, char** argv )
         if( processedInput.empty() ) break; // end of video stream
 
         // Show original and processed side by side
-        cv::hconcat(input, processedInput, output);
         cv::imshow("Gray", processedInput);
         
         // Algorithm control and loop break
@@ -57,6 +57,7 @@ int main(int argc, char** argv )
         if (cv::waitKey(5) == 51) context->set_strategy(lowPass); // key 3
         if (cv::waitKey(5) == 52) context->set_strategy(simpleConvolution); // key 4
         if (cv::waitKey(5) == 53) context->set_strategy(sobelEdgeDetection); // key 5
+        if (cv::waitKey(5) == 54) context->set_strategy(morphOps); // key 6
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
     }
