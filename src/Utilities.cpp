@@ -25,6 +25,9 @@ float Utilities::GetPixelValue(cv::Mat frame, int row, int column) {
 }
 
 void Utilities::SetPixelValue(cv::Mat frame, int row, int column, float value) {
+    if (row >= 0 == false|| row < frame.rows == false || column >= 0 == false || column < frame.cols == false){
+        return;
+    }
     if (value > 1.0f) value = 1.0f;
     
     auto setTo = value * 255.f;
