@@ -85,7 +85,6 @@ public:
 
         for (size_t i = 0; i < rows; i++) {
             for (size_t j = 0; j < columns; j++) {
-
                 if(Utilities::GetPixelValue(frame, i, j) < threshold ){
                     Utilities::SetPixelValue(frame, i, j, 0.0f);
                 }
@@ -278,6 +277,54 @@ public:
                 Utilities::SetPixelValue(output, i, j, fabs(fSumH + fSumV) / 2);
             }
         }
+        return output;
+    }
+};
+
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
+class MorphologicalOperations : public AlgorithmStrategy {
+public:
+    MorphologicalOperations(){
+        AlgorithmName = "Morphological Operations";
+    }
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float threshold = static_cast<float>(*variable.get());
+        int cvThresh = static_cast<int>(threshold * 255);
+
+        /* Code */
+        cv::threshold(frame, output, cvThresh, 255, 0);
+
+        // Dilation
+        size_t morphCount = 1;
+        for (size_t n = 0; n < morphCount; n++) {
+            for (int i = 0; i < rows; i++) {
+                for (int j = 0; j < columns; j++) {
+                    if (Utilities::GetPixelValue(frame, i, j) == 1) {
+
+                        Utilities::SetPixelValue(output, i, j, 1.0f);
+                        Utilities::SetPixelValue(output, i-1, j, 1.0f);
+                        Utilities::SetPixelValue(output, i+1, j, 1.0f);
+
+                        Utilities::SetPixelValue(output, i, j-1, 1.0f);
+                        Utilities::SetPixelValue(output, i, j+1, 1.0f);
+
+                        Utilities::SetPixelValue(output, i-1, j-1, 1.0f);
+                        Utilities::SetPixelValue(output, i+1, j+1, 1.0f);
+                        Utilities::SetPixelValue(output, i-1, j+1, 1.0f);
+                        Utilities::SetPixelValue(output, i+1, j-2, 1.0f);
+                    }
+                }
+            }
+        }
+
         return output;
     }
 };
