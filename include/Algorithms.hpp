@@ -420,6 +420,45 @@ public:
  * Concrete Strategies implement the algorithm while following the base Strategy
  * interface. The interface makes them interchangeable in the Context.
  */
+class AdaptiveThreshold : public AlgorithmStrategy {
+public:
+    AdaptiveThreshold(){
+        AlgorithmName = "Adaptive Threshold";
+    }
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float threshold = static_cast<float>(*variable.get());
+        // cv::adaptiveThreshold(frame, output, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+        // return output;
+        /* Code */
+        for (size_t i = 0; i < rows; i++) {
+            for (size_t j = 0; j < columns; j++) {
+                float regionSum = 0.0f;
+
+                for (int n = -2; n < +3; n++) {
+                    for (int m = -2; m < +3; m++) {
+                        regionSum += Utilities::GetPixelValue(frame, i + n, j + m);
+                    }
+                }
+
+                
+                regionSum /= 25.0f;
+                float outputPixVal = Utilities::GetPixelValue(frame, i, j) > (regionSum * threshold) ? 1.0f : 0.0f;
+                Utilities::SetPixelValue(output, i, j, outputPixVal);
+            }
+        }
+        return output;
+    }
+};
+
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
 class ExampleStrategy : public AlgorithmStrategy {
 public:
     ExampleStrategy(){
@@ -433,10 +472,9 @@ public:
         auto columns = frame.cols;
         float threshold = static_cast<float>(*variable.get());
 
-        /* Code */
-        // copy input to output
-        frame.copyTo(output);
 
+        /* Code */
+        frame.copyTo(output);   
         return output;
     }
 };

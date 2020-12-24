@@ -46,11 +46,11 @@ void Utilities::DecreaseInt(std::shared_ptr<int> input){
 }
 
 void Utilities::IncreaseFloat(std::shared_ptr<float> input){
-    *input += 0.05f;
+    *input += 0.01f;
     std::cout << "Increased input " << *input.get() << std::endl;
 }
 
 void Utilities::DecreaseFloat(std::shared_ptr<float> input){
-    *input -= 0.05f;
+    *input -= 0.01f;
     std::cout << "Decrease input " << *input.get() << std::endl;
 }

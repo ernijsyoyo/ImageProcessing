@@ -23,7 +23,7 @@ int main(int argc, char** argv )
     cv::namedWindow("Gray", cv::WINDOW_AUTOSIZE);
 
     // Control buttons
-    auto userInput = std::make_shared<float>(0.25f);
+    auto userInput = std::make_shared<float>(0.92f);
     auto algorithmSwitch = std::make_shared<int>(1);
 
     // Algorithms
@@ -35,7 +35,8 @@ int main(int argc, char** argv )
     auto sobelEdgeDetection= new SobelEdgeDetection;
     auto morphOps= new MorphologicalOperations;
     auto medianFilter= new MedianFilter;
-    Context *context = new Context(medianFilter);
+    auto adaptiveThreshold= new AdaptiveThreshold;;
+    Context *context = new Context(adaptiveThreshold);
     
     std::cout << "Stream starting" << std::endl;
     while (true) {
@@ -44,7 +45,8 @@ int main(int argc, char** argv )
         cv::cvtColor(input, input, cv::COLOR_BGR2GRAY); // conv color to gray
 
         // Process strategy and display result
-        auto processedInput = context->ProcessStrategy(input, userInput);
+        auto processedInput = context->ProcessStrategy(input , userInput);
+        
 
         if( processedInput.empty() ) break; // end of video stream
 
@@ -61,6 +63,7 @@ int main(int argc, char** argv )
         if (cv::waitKey(5) == 53) context->set_strategy(sobelEdgeDetection); // key 5
         if (cv::waitKey(5) == 54) context->set_strategy(morphOps); // key 6
         if (cv::waitKey(5) == 55) context->set_strategy(medianFilter); // key 7
+        if (cv::waitKey(5) == 56) context->set_strategy(adaptiveThreshold); // key 8
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
     }
