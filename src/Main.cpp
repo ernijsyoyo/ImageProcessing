@@ -34,7 +34,8 @@ int main(int argc, char** argv )
     auto simpleConvolution = new SimpleConvolution;
     auto sobelEdgeDetection= new SobelEdgeDetection;
     auto morphOps= new MorphologicalOperations;
-    Context *context = new Context(thresholdStrategy);
+    auto medianFilter= new MedianFilter;
+    Context *context = new Context(medianFilter);
     
     std::cout << "Stream starting" << std::endl;
     while (true) {
@@ -44,6 +45,7 @@ int main(int argc, char** argv )
 
         // Process strategy and display result
         auto processedInput = context->ProcessStrategy(input, userInput);
+
         if( processedInput.empty() ) break; // end of video stream
 
         // Show original and processed side by side
@@ -58,6 +60,7 @@ int main(int argc, char** argv )
         if (cv::waitKey(5) == 52) context->set_strategy(simpleConvolution); // key 4
         if (cv::waitKey(5) == 53) context->set_strategy(sobelEdgeDetection); // key 5
         if (cv::waitKey(5) == 54) context->set_strategy(morphOps); // key 6
+        if (cv::waitKey(5) == 55) context->set_strategy(medianFilter); // key 7
         if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
         if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
     }

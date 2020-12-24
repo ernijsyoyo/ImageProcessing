@@ -294,37 +294,124 @@ public:
         assert(variable != nullptr);
 
         auto output = cv::Mat(480, 640, CV_8UC1);
+        auto activity = cv::Mat(480, 640, CV_8UC1);
         auto rows = frame.rows;
         auto columns = frame.cols;
         float threshold = static_cast<float>(*variable.get());
         int cvThresh = static_cast<int>(threshold * 255);
 
         /* Code */
-        cv::threshold(frame, output, cvThresh, 255, 0);
-
+        cv::threshold(frame, activity, cvThresh, 255, 0); // threshold to value 75
+        activity.copyTo(output);
+        int morphCount = 3;
         // Dilation
-        size_t morphCount = 1;
-        for (size_t n = 0; n < morphCount; n++) {
+        // 
+        // for (size_t n = 0; n < morphCount; n++) {
+        //     for (int i = 0; i < rows; i++) {
+        //         for (int j = 0; j < columns; j++) {
+        //             if (Utilities::GetPixelValue(activity, i, j) == 1) {
+
+        //                 Utilities::SetPixelValue(output, i-1, j, 1.0f);
+        //                 Utilities::SetPixelValue(output, i+1, j, 1.0f);
+
+        //                 Utilities::SetPixelValue(output, i, j-1, 1.0f);
+        //                 Utilities::SetPixelValue(output, i, j+1, 1.0f);
+
+        //                 Utilities::SetPixelValue(output, i-1, j-1, 1.0f);
+        //                 Utilities::SetPixelValue(output, i+1, j+1, 1.0f);
+        //                 Utilities::SetPixelValue(output, i-1, j+1, 1.0f);
+        //                 Utilities::SetPixelValue(output, i+1, j-1, 1.0f);
+        //             }
+        //         }
+        //     }
+        // }
+        // return output;
+        
+
+        // Erosion
+        // for (int i = 0; i < rows; i++) {
+        //     for (int j = 0; j < columns; j++) {
+        //         float sum =  Utilities::GetPixelValue(activity, i, j) +
+        //                     Utilities::GetPixelValue(activity, i-1, j) +
+        //                     Utilities::GetPixelValue(activity, i+1, j) +
+
+        //                     Utilities::GetPixelValue(activity, i, j-1) +
+        //                     Utilities::GetPixelValue(activity, i, j+1) +
+
+        //                     Utilities::GetPixelValue(activity, i-1, j-1) +
+        //                     Utilities::GetPixelValue(activity, i+1, j+1) +
+        //                     Utilities::GetPixelValue(activity, i-1, j+1) +
+        //                     Utilities::GetPixelValue(activity, i+1, j-1);
+
+        //         auto equalToOne = Utilities::GetPixelValue(activity, i, j) == 1.0f;
+        //         auto lessThan = sum < 8.0f;
+        //         if (equalToOne && lessThan) {
+        //             Utilities::SetPixelValue(output, i, j, 0.0f);
+        //         }
+        //     }
+        // }
+        // return output;
+
+        // Edge
+        
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < columns; j++) {
-                    if (Utilities::GetPixelValue(frame, i, j) == 1) {
+                    float sum = Utilities::GetPixelValue(activity, i-1, j) +
+                                Utilities::GetPixelValue(activity, i+1, j) +
 
-                        Utilities::SetPixelValue(output, i, j, 1.0f);
-                        Utilities::SetPixelValue(output, i-1, j, 1.0f);
-                        Utilities::SetPixelValue(output, i+1, j, 1.0f);
+                                Utilities::GetPixelValue(activity, i, j-1) +
+                                Utilities::GetPixelValue(activity, i, j+1) +
 
-                        Utilities::SetPixelValue(output, i, j-1, 1.0f);
-                        Utilities::SetPixelValue(output, i, j+1, 1.0f);
+                                Utilities::GetPixelValue(activity, i-1, j-1) +
+                                Utilities::GetPixelValue(activity, i+1, j+1) +
+                                Utilities::GetPixelValue(activity, i-1, j+1) +
+                                Utilities::GetPixelValue(activity, i+1, j-1);
 
-                        Utilities::SetPixelValue(output, i-1, j-1, 1.0f);
-                        Utilities::SetPixelValue(output, i+1, j+1, 1.0f);
-                        Utilities::SetPixelValue(output, i-1, j+1, 1.0f);
-                        Utilities::SetPixelValue(output, i+1, j-2, 1.0f);
+                    auto equalToOne = Utilities::GetPixelValue(activity, i, j) == 1.0f;
+                    auto lessThan = sum == 8.0f;
+                    if (equalToOne && lessThan) {
+                        Utilities::SetPixelValue(output, i, j, 0.0f);
                     }
                 }
             }
-        }
+        
+        return output;
+    }
+};
 
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
+class MedianFilter : public AlgorithmStrategy {
+public:
+    MedianFilter(){
+        AlgorithmName = "Median Filter";
+    }
+    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+        assert(variable != nullptr);
+
+        auto output = cv::Mat(480, 640, CV_8UC1);
+        auto rows = frame.rows;
+        auto columns = frame.cols;
+        float threshold = static_cast<float>(*variable.get());
+
+        /* Code */
+        for (size_t i = 0; i < rows; i++) {
+            for (size_t j = 0; j < columns; j++) {
+                std::vector<float> v;
+
+                for (int n = -2; n < +3; n++) {
+                    for (int m = -2; m < +3; m++) {
+                        v.push_back(Utilities::GetPixelValue(frame, i + n, j + m));
+                    }
+                }
+
+                std::sort(v.begin(), v.end(), std::greater<float>());
+                Utilities::SetPixelValue(output, i, j, v[12]);             
+            }
+        }
+        std::cout << "Returning output" << std::endl;
         return output;
     }
 };
