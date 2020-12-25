@@ -1,6 +1,8 @@
+#ifndef IMGPROC_INCL_UTILITIES_H
+#define IMGPROC_INCL_UTILITIES_H
+
 #include <memory>
 #include <opencv2/opencv.hpp>
-#pragma once
 
 class Utilities {
 private:
@@ -21,3 +23,5 @@ public:
     static void IncreaseFloat(std::shared_ptr<float> input);
     static void DecreaseFloat(std::shared_ptr<float> input);
 };
+
+#endif

@@ -1,8 +1,9 @@
+#ifndef IMGPROC_INCL_ALGORITHMS_H
+#define IMGPROC_INCL_ALGORITHMS_H
+
 #include <opencv2/opencv.hpp>
 #include <Utilities.hpp>
-#pragma once
 
-#define GETPIX
 
 /**
  * The Strategy interface declares operations common to all supported versions
@@ -478,3 +479,5 @@ public:
         return output;
     }
 };
+
+#endif
