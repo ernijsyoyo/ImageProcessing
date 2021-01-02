@@ -15,445 +15,42 @@
 
 class AlgorithmStrategy {
 public:
-    virtual ~AlgorithmStrategy() {}
-    virtual cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable = nullptr) = 0;
-    std::string AlgorithmName; 
+  std::string AlgorithmName; 
+  virtual ~AlgorithmStrategy() {}
+  virtual cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable = nullptr) = 0;
 };
 
 /**
  * The Context defines the interface of interest to clients.
  */
 
-class Context
-{
-    /**
-     * @var Strategy The Context maintains a reference to one of the Strategy
-     * objects. The Context does not know the concrete class of a strategy. It
-     * should work with all strategies via the Strategy interface.
-     */
+class Context {
+  /**
+   * @var Strategy The Context maintains a reference to one of the Strategy
+   * objects. The Context does not know the concrete class of a strategy. It
+   * should work with all strategies via the Strategy interface.
+   */
 private:
-    AlgorithmStrategy *strategy_;
-    std::shared_ptr<float> m_Variable;
+  AlgorithmStrategy *strategy_;
+  std::shared_ptr<float> m_Variable;
 
-    /**std::vector<std::string>{"a", "e", "c", "b", "d"}
-     * Usually, the Context accepts a strategy through the constructor, but also
-     * provides a setter to change it at runtime.
-     */
+  /**std::vector<std::string>{"a", "e", "c", "b", "d"}
+   * Usually, the Context accepts a strategy through the constructor, but also
+   * provides a setter to change it at runtime.
+   */
 public:
-    Context(AlgorithmStrategy *algStrat = nullptr) {
-        std::cout << "Initializing with algorithm: " << algStrat->AlgorithmName << std::endl;
-        strategy_ = algStrat;
-    }
-    ~Context() {
-        delete this->strategy_;
-    }
+  Context(AlgorithmStrategy *algStrat = nullptr);
+  ~Context();
 
-    /**
-     * Usually, the Context allows replacing a Strategy object at runtime.
-     */
-    void set_strategy(AlgorithmStrategy *strategy) {
-        strategy_ = strategy;
-        std::cout << "Algorithm set to: " << strategy->AlgorithmName << std::endl;
-    }
-
-    /**
-     * The Context delegates some work to the Strategy object instead of
-     * implementing +multiple versions of the algorithm on its own.
-     */
-    cv::Mat ProcessStrategy(cv::Mat frame, std::shared_ptr<float> userInput = nullptr) {
-        cv::Mat result = this->strategy_->Process(frame, userInput);
-        return result;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class ThresholdStrategy : public AlgorithmStrategy {
-public:
-
-    ThresholdStrategy(){
-        AlgorithmName = "Thresholding";
-    }
-
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                if(Utilities::GetPixelValue(frame, i, j) < threshold ){
-                    Utilities::SetPixelValue(frame, i, j, 0.0f);
-                }
-                else {
-                    Utilities::SetPixelValue(frame, i, j, 1.0f);
-                }
-            }
-        }
-        return frame;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class MotionStrategy : public AlgorithmStrategy {
-private:
-    cv::Mat prev_Frame;
-
-public:
-    MotionStrategy(){
-        AlgorithmName = "Motion Algorithm";
-    }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        if (prev_Frame.empty()) {
-            frame.copyTo(prev_Frame);
-            return frame;
-        }        
-        
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-
-        // Subtract this frame from previous frame and set absolute diff
-        // alternatively: cv::absdiff(frame, prev_Frame, output);
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                auto diff = fabs(Utilities::GetPixelValue(frame, i, j) - Utilities::GetPixelValue(prev_Frame, i, j));
-                Utilities::SetPixelValue(output, i, j, diff);
-            }
-        }
-
-        frame.copyTo(prev_Frame); // save previous frame
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class LowpassFilter : public AlgorithmStrategy {
-public:
-    LowpassFilter(){
-        AlgorithmName = "Lowpass Filter";
-    }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float fLowPassRC = static_cast<float>(*variable.get());
-
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                auto framePix = Utilities::GetPixelValue(frame, i, j);
-                auto outputPix = Utilities::GetPixelValue(output, i, j);
-                float dPixel = framePix - outputPix; 
-                dPixel *= fLowPassRC;
-                auto outputValue = dPixel + outputPix;
-                Utilities::SetPixelValue(output, i, j, outputValue);
-            }
-        }
-
-        /* Code */
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class SimpleConvolution : public AlgorithmStrategy {
-public:
-
-    float *pConvoKernel = kernel_sharp;
-
-    float kernel_blur[9] = {
-        0.0f,   0.125f, 0.0f,
-        0.125f, 0.5f,   0.125f,
-        0.0f,   0.125f, 0.0f
-    };
-
-    float kernel_sharp[9] = {
-        0.0f,   -1.0f,  0.0f,
-        -1.0f,  -5.0f,  -1.0f,
-        0.0f,   -1.0f,  0.0f
-    };
-
-
-
-    SimpleConvolution(){
-        AlgorithmName = "Simple Convolution";
-    }
-
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-
-        if (cv::waitKey(5) == 110) {
-            pConvoKernel = kernel_blur; // key n
-            std::cout << "Blur" << std::endl;
-        }
-        if (cv::waitKey(5) == 109) {
-            pConvoKernel = kernel_sharp; // key m
-            std::cout << "Sharp" << std::endl;
-        } 
-
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                float fSum = 0.0f;
-
-                for (int n = -1; n < +2; n++) {
-                    for (int m = -1; m < +2; m++) {
-                        auto kernelCoeff = pConvoKernel[(m + 1) * 3 + (n + 1)] * threshold;
-                        auto pixelValue = Utilities::GetPixelValue(frame, i + n, j + m);
-                        auto outputPixel = pixelValue * kernelCoeff;
-                        fSum += outputPixel;
-                    }
-                }
-                Utilities::SetPixelValue(output, i, j, fSum);
-            }
-        }
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class SobelEdgeDetection : public AlgorithmStrategy {
-public:
-    float kernel_sobel_h[9] = {
-        -1.0f,  -2.0f, -1.0f,
-        0.0f,   0.0f,  0.0f,
-        1.0f,   2.0f,  1.0f
-    };
-    float kernel_sobel_v[9] = {
-        -1.0f,   0.0f,  1.0f,
-        -2.0f,   0.0f,  2.0f,
-        -1.0f,   0.0f,  1.0f
-    };
-
-
-    SobelEdgeDetection(){
-        AlgorithmName = "Sobel Edge Detection";
-    }
-
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                float fSumH = 0.0f;
-                float fSumV = 0.0f;
-
-                for (int n = -1; n < +2; n++) {
-                    for (int m = -1; m < +2; m++) {
-                        auto kernelCoeffH = kernel_sobel_h[(m + 1) * 3 + (n + 1)];
-                        auto kernelCoeffV = kernel_sobel_v[(m + 1) * 3 + (n + 1)];
-                        auto pixelValue = Utilities::GetPixelValue(frame, i + n, j + m);
-                        fSumH += pixelValue * kernelCoeffH;
-                        fSumV += pixelValue * kernelCoeffV;
-                    }
-                }
-                Utilities::SetPixelValue(output, i, j, fabs(fSumH + fSumV) / 2);
-            }
-        }
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class MorphologicalOperations : public AlgorithmStrategy {
-public:
-    MorphologicalOperations(){
-        AlgorithmName = "Morphological Operations";
-    }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto activity = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-        int cvThresh = static_cast<int>(threshold * 255);
-
-        /* Code */
-        cv::threshold(frame, activity, cvThresh, 255, 0); // threshold to value 75
-        activity.copyTo(output);
-        int morphCount = 3;
-        // Dilation
-        // 
-        // for (size_t n = 0; n < morphCount; n++) {
-        //     for (int i = 0; i < rows; i++) {
-        //         for (int j = 0; j < columns; j++) {
-        //             if (Utilities::GetPixelValue(activity, i, j) == 1) {
-
-        //                 Utilities::SetPixelValue(output, i-1, j, 1.0f);
-        //                 Utilities::SetPixelValue(output, i+1, j, 1.0f);
-
-        //                 Utilities::SetPixelValue(output, i, j-1, 1.0f);
-        //                 Utilities::SetPixelValue(output, i, j+1, 1.0f);
-
-        //                 Utilities::SetPixelValue(output, i-1, j-1, 1.0f);
-        //                 Utilities::SetPixelValue(output, i+1, j+1, 1.0f);
-        //                 Utilities::SetPixelValue(output, i-1, j+1, 1.0f);
-        //                 Utilities::SetPixelValue(output, i+1, j-1, 1.0f);
-        //             }
-        //         }
-        //     }
-        // }
-        // return output;
-        
-
-        // Erosion
-        // for (int i = 0; i < rows; i++) {
-        //     for (int j = 0; j < columns; j++) {
-        //         float sum =  Utilities::GetPixelValue(activity, i, j) +
-        //                     Utilities::GetPixelValue(activity, i-1, j) +
-        //                     Utilities::GetPixelValue(activity, i+1, j) +
-
-        //                     Utilities::GetPixelValue(activity, i, j-1) +
-        //                     Utilities::GetPixelValue(activity, i, j+1) +
-
-        //                     Utilities::GetPixelValue(activity, i-1, j-1) +
-        //                     Utilities::GetPixelValue(activity, i+1, j+1) +
-        //                     Utilities::GetPixelValue(activity, i-1, j+1) +
-        //                     Utilities::GetPixelValue(activity, i+1, j-1);
-
-        //         auto equalToOne = Utilities::GetPixelValue(activity, i, j) == 1.0f;
-        //         auto lessThan = sum < 8.0f;
-        //         if (equalToOne && lessThan) {
-        //             Utilities::SetPixelValue(output, i, j, 0.0f);
-        //         }
-        //     }
-        // }
-        // return output;
-
-        // Edge
-        
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < columns; j++) {
-                    float sum = Utilities::GetPixelValue(activity, i-1, j) +
-                                Utilities::GetPixelValue(activity, i+1, j) +
-
-                                Utilities::GetPixelValue(activity, i, j-1) +
-                                Utilities::GetPixelValue(activity, i, j+1) +
-
-                                Utilities::GetPixelValue(activity, i-1, j-1) +
-                                Utilities::GetPixelValue(activity, i+1, j+1) +
-                                Utilities::GetPixelValue(activity, i-1, j+1) +
-                                Utilities::GetPixelValue(activity, i+1, j-1);
-
-                    auto equalToOne = Utilities::GetPixelValue(activity, i, j) == 1.0f;
-                    auto lessThan = sum == 8.0f;
-                    if (equalToOne && lessThan) {
-                        Utilities::SetPixelValue(output, i, j, 0.0f);
-                    }
-                }
-            }
-        
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class MedianFilter : public AlgorithmStrategy {
-public:
-    MedianFilter(){
-        AlgorithmName = "Median Filter";
-    }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-
-        /* Code */
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                std::vector<float> v;
-
-                for (int n = -2; n < +3; n++) {
-                    for (int m = -2; m < +3; m++) {
-                        v.push_back(Utilities::GetPixelValue(frame, i + n, j + m));
-                    }
-                }
-
-                std::sort(v.begin(), v.end(), std::greater<float>());
-                Utilities::SetPixelValue(output, i, j, v[12]);             
-            }
-        }
-        std::cout << "Returning output" << std::endl;
-        return output;
-    }
-};
-
-/**
- * Concrete Strategies implement the algorithm while following the base Strategy
- * interface. The interface makes them interchangeable in the Context.
- */
-class AdaptiveThreshold : public AlgorithmStrategy {
-public:
-    AdaptiveThreshold(){
-        AlgorithmName = "Adaptive Threshold";
-    }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-        // cv::adaptiveThreshold(frame, output, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
-        // return output;
-        /* Code */
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < columns; j++) {
-                float regionSum = 0.0f;
-
-                for (int n = -2; n < +3; n++) {
-                    for (int m = -2; m < +3; m++) {
-                        regionSum += Utilities::GetPixelValue(frame, i + n, j + m);
-                    }
-                }
-
-                
-                regionSum /= 25.0f;
-                float outputPixVal = Utilities::GetPixelValue(frame, i, j) > (regionSum * threshold) ? 1.0f : 0.0f;
-                Utilities::SetPixelValue(output, i, j, outputPixVal);
-            }
-        }
-        return output;
-    }
+  /**
+   * Usually, the Context allows replacing a Strategy object at runtime.
+   */
+  void set_strategy(AlgorithmStrategy *strategy);
+  /**
+   * The Context delegates some work to the Strategy object instead of
+   * implementing +multiple versions of the algorithm on its own.
+   */
+  cv::Mat ProcessStrategy(cv::Mat frame, std::shared_ptr<float> userInput = nullptr);
 };
 
 /**
@@ -462,22 +59,248 @@ public:
  */
 class ExampleStrategy : public AlgorithmStrategy {
 public:
-    ExampleStrategy(){
-        AlgorithmName = "Example Algorithm";
+  ExampleStrategy() {
+    AlgorithmName = "Example Algorithm";
+  }
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
+    assert(variable != nullptr);
+
+    auto output = cv::Mat(480, 640, CV_8UC1);
+    auto rows = frame.rows;
+    auto columns = frame.cols;
+    float threshold = static_cast<float>(*variable.get());
+
+    /* Code */
+    frame.copyTo(output);   
+    return output;
+  }
+};
+
+/**
+ * Image binarization - if a pixel is below a certain threshold, then make its value 0
+ * If above a certain threshold, then make value 1
+ */
+class ThresholdStrategy : public AlgorithmStrategy {
+public:
+  ThresholdStrategy();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * Calculate a difference between previous and current frame, if both frames are the same,
+ * then the output is small. If both frames are quite different then the output is large.
+ * Useful for detecting motion
+ */
+class MotionStrategy : public AlgorithmStrategy {
+private:
+  cv::Mat prev_Frame;
+
+public:
+  MotionStrategy();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * Simple RC Filter for removing noise
+ * P = (I - P) * temporal constant
+ * Where:
+ * P - Pixel
+ * I - Input
+ * Temporal constant - user defined, control the amount of noise reduced
+ */
+class LowpassFilter : public AlgorithmStrategy {
+public:
+  LowpassFilter();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * Example of a simple convolution
+ * 
+ * TODO: Experiment with FFTs
+ */
+class SimpleConvolution : public AlgorithmStrategy {
+public:
+  float *pConvoKernel = kernel_sharp;
+  float kernel_blur[9] = {
+    0.0f,   0.125f, 0.0f,
+    0.125f, 0.5f,   0.125f,
+    0.0f,   0.125f, 0.0f
+  };
+  float kernel_sharp[9] = {
+    0.0f,   -1.0f,  0.0f,
+    -1.0f,  -5.0f,  -1.0f,
+    0.0f,   -1.0f,  0.0f
+  };
+
+  SimpleConvolution();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;    
+};
+
+/**
+ * Detect edges by convolving outputs of the two kernels
+ */
+class SobelEdgeDetection : public AlgorithmStrategy {
+public:
+  float kernel_sobel_h[9] = {
+    -1.0f,  -2.0f, -1.0f,
+    0.0f,   0.0f,  0.0f,
+    1.0f,   2.0f,  1.0f
+  };
+  float kernel_sobel_v[9] = {
+    -1.0f,   0.0f,  1.0f,
+    -2.0f,   0.0f,  2.0f,
+    -1.0f,   0.0f,  1.0f
+  };
+
+  SobelEdgeDetection();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * CHange the shape of objects in image in binary (thresholded) domain
+ * 1. Erosion - Removing a single pixel from edges (shrinking), useful to remove spurious pixels
+ * 2. Dilation - Add a pixel to edges
+ * Combine erosion with dilation to remove spatial noise
+ * 
+ * 3. Edge detection, similar to erosion
+ *  If a pixel has all 8 neighbours high, then set itself to low
+ * 
+ * 
+ */
+class MorphologicalOperations : public AlgorithmStrategy {
+public:
+  MorphologicalOperations();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * Assume image information is blurred out and we have transient-like outliers (rain, snow)
+ * Looking at pixels 5x5 neighbourhood and collect all 25 pixels in a list
+ * Sort the list from smallest to biggest and set the median(middle) value
+ * as our output. This will remove the transient outliers
+ */
+class MedianFilter : public AlgorithmStrategy {
+public:
+  MedianFilter();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+/**
+ * Concrete Strategies implement the algorithm while following the base Strategy
+ * interface. The interface makes them interchangeable in the Context.
+ */
+class AdaptiveThreshold : public AlgorithmStrategy {
+public:
+  AdaptiveThreshold();
+  cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override;
+};
+
+class RunAlgorithms{
+
+public:
+  static int ChangeStrategy(){
+    std::cout << "Change Algorithm" << std::endl;
+    std::cout << "0 - Direct Output" << std::endl;
+    std::cout << "1 - Thresholding" << std::endl;
+    std::cout << "2 - Motion Detect" << std::endl;
+    std::cout << "3 - LowPass RC filter (Noise Removal)" << std::endl;
+    std::cout << "4 - Simple Convolution" << std::endl;
+    std::cout << "5 - Sobel Edge Detection" << std::endl;
+    std::cout << "6 - Morphological Operation" << std::endl;
+    std::cout << "7 - Median Filter" << std::endl;
+    std::cout << "8 - Adaptive Threshold" << std::endl;
+    std::cout << "9 - Exit program" << std::endl;
+
+    int input = 0;
+    std::cin >> input;
+    return input;
+  }
+  static void Run(){
+    // Start the webcam capping
+  cv::VideoCapture vidCap;
+  if (!vidCap.open(0))
+  {
+    std::cout << "returning " << std::endl;
+  }
+
+	// Placeholders for frames
+  cv::Mat input;
+  cv::Mat prev_input;
+  cv::Mat output;
+  cv::namedWindow("Gray", cv::WINDOW_AUTOSIZE);
+
+  // Control buttons
+  auto userInput = std::make_shared<float>(0.92f);
+  auto algorithmSwitch = std::make_shared<int>(1);
+
+  // Algorithms
+  auto thresholdStrategy = new ThresholdStrategy;
+  auto motionStrategy = new MotionStrategy;
+  auto lowPass = new LowpassFilter;
+  auto simpleConvolution = new SimpleConvolution;
+  auto sobelEdgeDetection= new SobelEdgeDetection;
+  auto morphOps= new MorphologicalOperations;
+  auto medianFilter= new MedianFilter;
+  auto adaptiveThreshold= new AdaptiveThreshold;
+  auto exampleStrategy = new ExampleStrategy;
+  Context *context = new Context(exampleStrategy);
+  
+  std::cout << "Stream starting" << std::endl;
+  while (true) {
+    // Capture frame and convert to grayscale
+    vidCap >> input;
+    cv::cvtColor(input, input, cv::COLOR_BGR2GRAY); // conv color to gray
+
+    // Process strategy and display result
+    auto processedInput = context->ProcessStrategy(input , userInput);
+    if( processedInput.empty() ) break; // end of video stream
+
+    // Show original and processed side by side
+    cv::imshow("Gray", processedInput);
+    
+    // Algorithm control and loop break
+    if (cv::waitKey(5) == 113){ // button Q
+      auto strategy = ChangeStrategy();
+      switch (strategy) {
+      case 1:
+        context->set_strategy(thresholdStrategy);
+        break;
+      case 2:
+        context->set_strategy(motionStrategy);
+        break;
+      case 3:
+        context->set_strategy(lowPass);
+        break;
+      case 4:
+        context->set_strategy(simpleConvolution);
+        break;
+      case 5:
+        context->set_strategy(sobelEdgeDetection);
+        break;
+      case 6:
+        context->set_strategy(morphOps);
+        break;
+      case 7:
+        context->set_strategy(medianFilter);
+        break;
+      case 8:
+        context->set_strategy(adaptiveThreshold);
+        break;
+      case 0:
+        context->set_strategy(exampleStrategy);
+        break;
+      case 9: // exit the program
+        return exit(0);
+      }
     }
-    cv::Mat Process(cv::Mat frame, std::shared_ptr<float> variable=nullptr) override {
-        assert(variable != nullptr);
-
-        auto output = cv::Mat(480, 640, CV_8UC1);
-        auto rows = frame.rows;
-        auto columns = frame.cols;
-        float threshold = static_cast<float>(*variable.get());
-
-
-        /* Code */
-        frame.copyTo(output);   
-        return output;
-    }
+    if (cv::waitKey(5) == 120) Utilities::IncreaseFloat(userInput); // key z
+    if (cv::waitKey(5) == 122) Utilities::DecreaseFloat(userInput); // key x
+  } // end of processing loop
+  
+  vidCap.release();
+  cv::destroyAllWindows();
+  }
 };
 
 #endif
